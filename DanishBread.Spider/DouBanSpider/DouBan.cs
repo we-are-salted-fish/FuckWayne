@@ -81,7 +81,7 @@ namespace FuckWayne.DouBan
         /// <param name="address"></param>
         /// <param name="encoding"></param>
         /// <returns></returns>
-        public IHtmlDocument GetHtmlDocumet(string address, Encoding encoding = null)
+        public IHtmlDocument GetHtmlDocument(string address, Encoding encoding = null)
         {
             var resultStr = GetUrlString(address, encoding);
             return new HtmlParser().ParseDocument(resultStr);
@@ -101,7 +101,7 @@ namespace FuckWayne.DouBan
             var address = string.IsNullOrWhiteSpace(url) ? "https://www.dbmeinv.com/index.htm?cid=" + Ids[rand.Next(Ids.Length)] : url;
 
             // 请求豆辨网
-            var document = GetHtmlDocumet(address);
+            var document = GetHtmlDocument(address);
 
             // 根据class获取html元素
             var cells = document.QuerySelectorAll(".panel-body li");
