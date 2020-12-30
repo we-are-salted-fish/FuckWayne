@@ -1,12 +1,15 @@
 ﻿using Microsoft.Extensions.Configuration;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace FuckWayne.Configuration
 {
     public class Configuration
     {
         public string SaveFolder { get; set; }
-       
+
+        public List<string> Categorys { get; set; } = new List<string>();
 
         public static Configuration Build()
         {
@@ -18,7 +21,8 @@ namespace FuckWayne.Configuration
 
             return new Configuration
             {
-                SaveFolder = config[nameof(SaveFolder)]
+                SaveFolder = config[nameof(SaveFolder)],
+                Categorys = config[nameof(Categorys)].Split(',').Select(s => s.Trim()).ToList()
             };
         }
     }

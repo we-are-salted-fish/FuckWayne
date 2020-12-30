@@ -9,14 +9,12 @@ namespace DouBanSpider
 {
     class Program
     {
-
-
         static void Main(string[] args)
         {
             var di = DiHelper.BuildDi();
 
-            Console.Title = "FuckWayne!";            
-            Console.WriteLine("welcome FuckWayne!");
+            Console.Title = "good good study,day day up!";            
+            Console.WriteLine("sry...");
 
             var logger = di.GetService<ILogger<Program>>();
             logger.LogInformation("123");
@@ -29,7 +27,7 @@ namespace DouBanSpider
             }
 
             NewLife.Log.XTrace.UseConsole();
-            var wayne = new DouBan(config.SaveFolder);
+            var wayne = new DouBan(config.SaveFolder, config.Categorys);
             wayne.DownloadAllImage();
 
             Console.ReadKey();

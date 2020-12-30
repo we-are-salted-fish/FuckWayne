@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
@@ -17,34 +18,35 @@ namespace FuckWayne.DouBan
     public class DouBan
     {
 
-        public DouBan(string saveFolder)
+        public DouBan(string saveFolder, List<string> Categorys)
         {
-            this.SaveFolder = saveFolder;
+            this._saveFolder = saveFolder;
+            this._categorys = Categorys;
             if (!saveFolder.EndsWith("\\"))
             {
-                this.SaveFolder += "\\";
+                this._saveFolder += "\\";
             }
         }
 
         /// <summary>
         /// 保存路径
         /// </summary>
-        private string SaveFolder = "";
+        private string _saveFolder = "";
 
         /// <summary>
         /// 分类ID数据 2-胸 3-腿 4-脸 5-杂 6-臀 7-袜子
         /// </summary>
-        private int[] Ids = new int[] { 2, 3, 4, 5, 6, 7 };
+        private List<string> _categorys;
 
         /// <summary>
         /// 豆瓣地址
         /// </summary>
-        private string DouBanUrl = "https://www.buxiuse.com/?cid={0}&page={1}";
+        private string _douBanUrl = "https://www.buxiuse.com/?cid={0}&page={1}";
 
         /// <summary>
         /// 已下载图片链接
         /// </summary>
-        private List<string> ImageUrlList = new List<string>();
+        private List<string> _imageUrlList = new List<string>();
 
         /// <summary>
         /// 网页源代码
@@ -98,7 +100,7 @@ namespace FuckWayne.DouBan
             var rand = new Random();
 
             // 豆瓣地址
-            var address = string.IsNullOrWhiteSpace(url) ? "https://www.dbmeinv.com/index.htm?cid=" + Ids[rand.Next(Ids.Length)] : url;
+            var address = string.IsNullOrWhiteSpace(url) ? "https://www.dbmeinv.com/index.htm?cid=" + _categorys[rand.Next(_categorys.Count())] : url;
 
             // 请求豆辨网
             var document = GetHtmlDocument(address);
@@ -126,7 +128,7 @@ namespace FuckWayne.DouBan
         /// <param name="savePath">保存路径</param>
         /// <param name="cid">分类ID</param>
         /// <param name="index">页码</param>
-        private void Do_Task(string savePath, int cid, int index)
+        private void Do_Task(string savePath, string cid, int index)
         {
             if (!Directory.Exists(savePath))
             {
@@ -134,7 +136,7 @@ namespace FuckWayne.DouBan
             }
 
             // 构造链接
-            var url = string.Format(DouBanUrl, cid, index);
+            var url = string.Format(_douBanUrl, cid, index);
 
             // 获取图片列表
             var imageList = GetListBelle(url);
@@ -149,7 +151,7 @@ namespace FuckWayne.DouBan
             foreach (var img in imageList)
             {
                 var imgUrl = img.ImageUrl.Replace("bmiddle", "large");
-                if (!ImageUrlList.Contains(imgUrl))
+                if (!_imageUrlList.Contains(imgUrl))
                 {
                     var dirImageCount = Directory.GetDirectories(savePath);
 
@@ -187,7 +189,7 @@ namespace FuckWayne.DouBan
                             XTrace.WriteLine(log);
                         }
                     }
-                    ImageUrlList.Add(img.ImageUrl);
+                    _imageUrlList.Add(img.ImageUrl);
                 }
             }
 
@@ -200,12 +202,12 @@ namespace FuckWayne.DouBan
         /// </summary>
         public void DownloadAllImage()
         {
-            foreach (var cid in Ids)
+            foreach (var cid in _categorys)
             {
                 // 还是开一个任务吧
                 Task.Factory.StartNew(() =>
                 {
-                    Do_Task(this.SaveFolder + cid, cid, 1);
+                    Do_Task(this._saveFolder + cid, cid, 1);
                 });
             }
         }
