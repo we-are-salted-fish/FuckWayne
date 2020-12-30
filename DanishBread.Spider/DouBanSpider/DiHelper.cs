@@ -19,7 +19,7 @@ namespace DouBanSpider
                 .MinimumLevel.Information()
                 .Enrich.FromLogContext()
                 .WriteTo.Console()
-                .WriteTo.File(Path.Combine("logs", "log-.log"), rollingInterval: RollingInterval.Day)
+                .WriteTo.File(Path.Combine(basePath,"logs", "log-.log"), rollingInterval: RollingInterval.Day)
                 .CreateLogger();
             //配置
             var configuration = Configuration.Build();
@@ -33,6 +33,7 @@ namespace DouBanSpider
             var serviceProvider = services.BuildDynamicProxyProvider();
             var logger = serviceProvider.GetService<ILogger<DiHelper>>();
             logger.LogInformation("DI 创建成功");
+            
             return serviceProvider;
         }
 
