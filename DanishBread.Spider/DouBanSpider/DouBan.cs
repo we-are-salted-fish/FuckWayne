@@ -7,17 +7,17 @@ using System.Text;
 using System.Threading.Tasks;
 using AngleSharp.Html.Dom;
 using AngleSharp.Html.Parser;
+using DouBanSpider;
 using FuckWayne.Models;
 using NewLife.Log;
 
 namespace FuckWayne.DouBan
 {
     /// <summary>
-    /// 豆瓣图片处理 url:https://www.dbmeinv.com/index.htm
+    /// douban imgs handler url:https://www.dbmeinv.com/index.htm
     /// </summary>
     public class DouBan
     {
-
         public DouBan(string saveFolder, List<string> Categorys)
         {
             this._saveFolder = saveFolder;
@@ -28,33 +28,30 @@ namespace FuckWayne.DouBan
             }
         }
 
-        /// <summary>
-        /// 保存路径
-        /// </summary>
         private string _saveFolder = "";
 
         /// <summary>
-        /// 分类ID数据 2-胸 3-腿 4-脸 5-杂 6-臀 7-袜子
+        /// Category 2-胸 3-腿 4-脸 5-杂 6-臀 7-袜子
         /// </summary>
         private List<string> _categorys;
 
         /// <summary>
-        /// 豆瓣地址
+        /// DouBan Url
         /// </summary>
         private string _douBanUrl = "https://www.buxiuse.com/?cid={0}&page={1}";
 
         /// <summary>
-        /// 已下载图片链接
+        /// downloaded url list
         /// </summary>
         private List<string> _imageUrlList = new List<string>();
 
         /// <summary>
-        /// 网页源代码
+        /// Get Page Source
         /// </summary>
-        /// <param name="address"></param>
+        /// <param name="url"></param>
         /// <param name="encoding"></param>
         /// <returns></returns>
-        public string GetUrlString(string address, Encoding encoding = null)
+        public string GetUrlString(string url, Encoding encoding = null)
         {
             if (encoding == null)
             {
@@ -63,29 +60,25 @@ namespace FuckWayne.DouBan
             var str = string.Empty;
             try
             {
-                using (var wc = new WebClient())
-                {
-                    wc.Encoding = encoding;
-                    str = wc.DownloadString(address);
-                }
+                str = HttpHelper.GetStringAsync(url, encoding).Result;
             }
             catch (Exception e)
             {
-                Console.WriteLine($"请求{address}发生错误,原因{e.Message}");
+                Console.WriteLine($"request error{url},tips：{e.Message}");
             }
 
             return str;
         }
 
         /// <summary>
-        /// 获取网页源代码并转换为IHtmlDocument
+        /// PageSource Parse IHtmlDocument
         /// </summary>
-        /// <param name="address"></param>
+        /// <param name="url"></param>
         /// <param name="encoding"></param>
         /// <returns></returns>
-        public IHtmlDocument GetHtmlDocument(string address, Encoding encoding = null)
+        public IHtmlDocument GetHtmlDocument(string url, Encoding encoding = null)
         {
-            var resultStr = GetUrlString(address, encoding);
+            var resultStr = GetUrlString(url, encoding);
             return new HtmlParser().ParseDocument(resultStr);
         }
 
@@ -94,18 +87,12 @@ namespace FuckWayne.DouBan
         /// </summary>
         /// <param name="url">请求地址</param>
         /// <returns></returns>
-        public List<Belle> GetListBelle(string url = "")
+        public List<Belle> GetListBelle(string url)
         {
-            // 随机数
-            var rand = new Random();
+            // send request
+            var document = GetHtmlDocument(url);
 
-            // 豆瓣地址
-            var address = string.IsNullOrWhiteSpace(url) ? "https://www.dbmeinv.com/index.htm?cid=" + _categorys[rand.Next(_categorys.Count())] : url;
-
-            // 请求豆辨网
-            var document = GetHtmlDocument(address);
-
-            // 根据class获取html元素
+            // get document by class
             var cells = document.QuerySelectorAll(".panel-body li");
 
             // We are only interested in the text - select it with LINQ
@@ -122,12 +109,6 @@ namespace FuckWayne.DouBan
             return list;
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="savePath">保存路径</param>
-        /// <param name="cid">分类ID</param>
-        /// <param name="index">页码</param>
         private void Do_Task(string savePath, string cid, int index)
         {
             if (!Directory.Exists(savePath))
@@ -135,19 +116,14 @@ namespace FuckWayne.DouBan
                 Directory.CreateDirectory(savePath);
             }
 
-            // 构造链接
             var url = string.Format(_douBanUrl, cid, index);
 
-            // 获取图片列表
             var imageList = GetListBelle(url);
 
-            // 日志
-
-            string log = $"开始抓取cid ={cid} 第 {index}页";
-
+            var log = $"start download cid ={cid}  NO.{index}";
             XTrace.WriteLine(log);
 
-            // 开始下载
+            // start download
             foreach (var img in imageList)
             {
                 var imgUrl = img.ImageUrl.Replace("bmiddle", "large");
@@ -155,56 +131,57 @@ namespace FuckWayne.DouBan
                 {
                     var dirImageCount = Directory.GetDirectories(savePath);
 
-                    // 子文件夹个数为0 创建第一个文件夹
+                    // child folder counts= then create first folder
                     if (dirImageCount.Length == 0)
                     {
                         Directory.CreateDirectory(savePath + "\\1");
                         dirImageCount = Directory.GetDirectories(savePath);
                     }
 
-                    // 最后一个文件夹的图片数量
+                    // last child folder imgs count
                     var imageCount = Directory.GetFiles(savePath + "\\" + dirImageCount.Length);
 
-                    // 大于等于500时新建文件夹
+                    // imgs count>=500 then create new folder
                     if (imageCount.Length >= 500)
                     {
                         Directory.CreateDirectory(savePath + "\\" + (dirImageCount.Length + 1));
                     }
 
-                    // 重新获取一下子文件夹数量
+                    // reload child folder counts
                     dirImageCount = Directory.GetDirectories(savePath);
 
-                    using (var wc = new WebClient())
+                    try
                     {
-                        try
+                        var imgStream = HttpHelper.GetStreamAsync(imgUrl).Result;
+                        using (var fileStream = File.Create(Path.Combine(savePath + "\\" + dirImageCount.Length, Path.GetFileName(imgUrl))))
                         {
-                            wc.DownloadFile(imgUrl, Path.Combine(savePath + "\\" + dirImageCount.Length, Path.GetFileName(imgUrl)));
+                            fileStream.Write(imgStream);
+                        }
 
-                            log = $"{imgUrl} 下载成功";
-                            XTrace.WriteLine(log);
-                        }
-                        catch (Exception ex)
-                        {
-                            log = $"{imgUrl} 下载失败 {ex.Message} 路径{ex.Source} 堆栈{ex.StackTrace}";
-                            XTrace.WriteLine(log);
-                        }
+                        log = $"{imgUrl} downloaded success";
+                        XTrace.WriteLine(log);
+
+                        _imageUrlList.Add(img.ImageUrl);
                     }
-                    _imageUrlList.Add(img.ImageUrl);
+                    catch (Exception ex)
+                    {
+                        log = $"{imgUrl} downloaded error {ex.Message} Source:{ex.Source} StackTrace:{ex.StackTrace}";
+                        XTrace.WriteLine(log);
+                    }
                 }
             }
 
-            // 递归调用
+            // recursion
             Do_Task(savePath, cid, index + 1);
         }
 
         /// <summary>
-        /// 暴力获取所有图片....
+        /// get all img....
         /// </summary>
         public void DownloadAllImage()
         {
             foreach (var cid in _categorys)
             {
-                // 还是开一个任务吧
                 Task.Factory.StartNew(() =>
                 {
                     Do_Task(this._saveFolder + cid, cid, 1);
@@ -212,5 +189,4 @@ namespace FuckWayne.DouBan
             }
         }
     }
-
 }
