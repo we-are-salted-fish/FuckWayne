@@ -1,49 +1,53 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using AngleSharp.Html.Dom;
 using AngleSharp.Html.Parser;
-using DouBanSpider;
-using FuckWayne.Models;
+using DouBanSpider.Models;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using NewLife.Log;
 
-namespace FuckWayne.DouBan
+namespace DouBanSpider
 {
     /// <summary>
     /// douban imgs handler url:https://www.dbmeinv.com/index.htm
     /// </summary>
     public class DouBan
     {
-        public DouBan(string saveFolder, List<string> Categorys)
-        {
-            this._saveFolder = saveFolder;
-            this._categorys = Categorys;
-            if (!saveFolder.EndsWith("\\"))
-            {
-                this._saveFolder += "\\";
-            }
-        }
-
-        private string _saveFolder = "";
+        private readonly DouBanClient _douBanClient;
+        private readonly ILogger<DouBan> _logger;
+        private readonly string _saveFolder;
 
         /// <summary>
         /// Category 2-胸 3-腿 4-脸 5-杂 6-臀 7-袜子
         /// </summary>
-        private List<string> _categorys;
+        private readonly IEnumerable<int> _categories;
 
         /// <summary>
         /// DouBan Url
         /// </summary>
-        private string _douBanUrl = "https://www.buxiuse.com/?cid={0}&page={1}";
+        private readonly string _douBanUrl = "https://www.buxiuse.com/?cid={0}&page={1}";
 
         /// <summary>
         /// downloaded url list
         /// </summary>
-        private List<string> _imageUrlList = new List<string>();
+        private readonly List<string> _imageUrlList = new List<string>();
+
+        public DouBan(IOptions<DouBanOptions> options,DouBanClient douBanClient, ILogger<DouBan> logger)
+        {
+            _douBanClient = douBanClient;
+            _logger = logger;
+            _saveFolder = options.Value.SaveFolder;
+            _categories = options.Value.Categories;
+            if (!_saveFolder.EndsWith("\\"))
+            {
+                _saveFolder += "\\";
+            }
+        }
+
 
         /// <summary>
         /// Get Page Source
@@ -60,7 +64,7 @@ namespace FuckWayne.DouBan
             var str = string.Empty;
             try
             {
-                str = HttpHelper.GetStringAsync(url, encoding).Result;
+                str = _douBanClient.GetStringAsync(url, encoding).Result;
             }
             catch (Exception e)
             {
@@ -109,7 +113,7 @@ namespace FuckWayne.DouBan
             return list;
         }
 
-        private void Do_Task(string savePath, string cid, int index)
+        private void DoTask(string savePath, int cid, int index)
         {
             if (!Directory.Exists(savePath))
             {
@@ -152,7 +156,7 @@ namespace FuckWayne.DouBan
 
                     try
                     {
-                        var imgStream = HttpHelper.GetStreamAsync(imgUrl).Result;
+                        var imgStream = _douBanClient.GetStreamAsync(imgUrl).Result;
                         using (var fileStream = File.Create(Path.Combine(savePath + "\\" + dirImageCount.Length, Path.GetFileName(imgUrl))))
                         {
                             fileStream.Write(imgStream);
@@ -172,7 +176,7 @@ namespace FuckWayne.DouBan
             }
 
             // recursion
-            Do_Task(savePath, cid, index + 1);
+            DoTask(savePath, cid, index + 1);
         }
 
         /// <summary>
@@ -180,11 +184,11 @@ namespace FuckWayne.DouBan
         /// </summary>
         public void DownloadAllImage()
         {
-            foreach (var cid in _categorys)
+            foreach (var cid in _categories)
             {
                 Task.Factory.StartNew(() =>
                 {
-                    Do_Task(this._saveFolder + cid, cid, 1);
+                    DoTask(this._saveFolder + cid, cid, 1);
                 });
             }
         }

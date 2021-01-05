@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 
-namespace FuckWayne.Models
+namespace DouBanSpider.Models
 {
     /// <summary>
     /// 图片信息
