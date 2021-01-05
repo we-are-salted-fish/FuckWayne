@@ -8,8 +8,6 @@ using AngleSharp.Html.Parser;
 using DouBanSpider.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using NewLife.Log;
-
 namespace DouBanSpider
 {
     /// <summary>
@@ -125,7 +123,7 @@ namespace DouBanSpider
             var imageList = GetListBelle(url);
 
             var log = $"start download cid ={cid}  NO.{index}";
-            XTrace.WriteLine(log);
+            _logger.LogInformation(log);
 
             // start download
             foreach (var img in imageList)
@@ -156,21 +154,21 @@ namespace DouBanSpider
 
                     try
                     {
-                        var imgStream = _douBanClient.GetStreamAsync(imgUrl).Result;
+                        using (var imgStream = _douBanClient.GetStreamAsync(imgUrl).Result)
                         using (var fileStream = File.Create(Path.Combine(savePath + "\\" + dirImageCount.Length, Path.GetFileName(imgUrl))))
                         {
-                            fileStream.Write(imgStream);
+                            imgStream.CopyTo(fileStream);
                         }
 
                         log = $"{imgUrl} downloaded success";
-                        XTrace.WriteLine(log);
+                        _logger.LogInformation(log);
 
                         _imageUrlList.Add(img.ImageUrl);
                     }
                     catch (Exception ex)
                     {
                         log = $"{imgUrl} downloaded error {ex.Message} Source:{ex.Source} StackTrace:{ex.StackTrace}";
-                        XTrace.WriteLine(log);
+                        _logger.LogInformation(log);
                     }
                 }
             }
